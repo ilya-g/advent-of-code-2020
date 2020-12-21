@@ -38,15 +38,9 @@ class TileRotation(val tile: Tile, val rotation: Matrix) {
     override fun toString(): String = (0 until tile.sideSize).joinToString("\n") { y -> line(y).concatToString() }
 }
 
-enum class Side(val cx: Int, val cy: Int) {
-    U(1, 0),
-    D(1, -1),
-    L(0, 1),
-    R(-1, 1);
+enum class Side {
+    U, D, L, R;
 
-    private fun mul(i: Int, side: Int, c: Int) = if (c < 0) side - 1 else c * i
-    fun x(i: Int, side: Int) = mul(i, side, cx)
-    fun y(i: Int, side: Int) = mul(i, side, cy)
     val matching: Side get() = when (this) {
         U -> D
         D -> U
@@ -55,14 +49,18 @@ enum class Side(val cx: Int, val cy: Int) {
     }
 }
 
+operator fun TileRotation.get(side: Side, t: Int): Char = when(side) {
+    Side.U -> get(t, 0)
+    Side.D -> get(t, tile.sideSize - 1)
+    Side.L -> get(0, t)
+    Side.R -> get(tile.sideSize - 1, t)
+}
+
 val sides = Side.values().toList()
 
 fun TileRotation.matchesWith(other: TileRotation, thisSide: Side): Boolean {
     val otherSide = thisSide.matching
-    val s = this.tile.sideSize
-    return (0 until s).all { i ->
-        this[thisSide.x(i,s), thisSide.y(i,s)] == other[otherSide.x(i,s), otherSide.y(i,s)]
-    }
+    return (0 until tile.sideSize).all { i -> this[thisSide, i] == other[otherSide, i] }
 }
 
 fun Pos.adjacent(side: Side): Pos = when (side) {
@@ -79,9 +77,9 @@ object Monster {
  #  #  #  #  #  #   
     """.trimIndent().lines()
     val height = lines.size
-    val width = lines.map { it.length }.distinct().single()
-    val points = (0 until height).flatMap { y ->
-        (0 until width).mapNotNull { x -> if (lines[y][x] == '#') Pos(x, y) else null }
+    val width = lines.maxOf { it.length }
+    val points = lines.flatMapIndexed { y, line ->
+        line.mapIndexedNotNull { x, c -> if (c == '#') Pos(x, y) else null }
     }
 }
 
